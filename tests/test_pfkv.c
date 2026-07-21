@@ -304,6 +304,37 @@ static void test_garbage_sector_is_recovered(void)
     assert_value("x", "1");
 }
 
+static void test_deleted_key_stays_deleted_across_gc(void)
+{
+    /* A low threshold forces static relocation of sectors that are not the
+     * oldest, which must carry the tombstone along. */
+    pfkv_config_t cfg = { PFKV_GC_GREEDY, 2 };
+    TEST_ASSERT_EQUAL(PFKV_OK, pfkv_mount(&kv, &hal, &cfg));
+    char key[16], v[40];
+    memset(v, 'c', sizeof v);
+    /* Old values of "victim" spread over several sectors, then delete it. */
+    for (int round = 0; round < 3; round++) {
+        TEST_ASSERT_EQUAL(PFKV_OK, pfkv_put(&kv, "victim", v, sizeof v));
+        for (int i = 0; i < 15; i++) {
+            snprintf(key, sizeof key, "cold%d_%d", round, i);
+            TEST_ASSERT_EQUAL(PFKV_OK, pfkv_put(&kv, key, v, sizeof v));
+        }
+    }
+    /* Put the tombstone in a mostly-dead sector so greedy GC reclaims it
+     * while older values of the key still sit in cold sectors. */
+    for (int i = 0; i < 20; i++)
+        TEST_ASSERT_EQUAL(PFKV_OK, pfkv_put(&kv, "hot", &i, sizeof i));
+    TEST_ASSERT_EQUAL(PFKV_OK, pfkv_delete(&kv, "victim"));
+    for (int i = 0; i < 2000; i++) {
+        TEST_ASSERT_EQUAL(PFKV_OK, pfkv_put(&kv, "hot", &i, sizeof i));
+        if (i % 97 == 0) {
+            TEST_ASSERT_EQUAL(PFKV_OK, pfkv_mount(&kv, &hal, &cfg));
+            char buf[64];
+            TEST_ASSERT_EQUAL(PFKV_ERR_NOT_FOUND, pfkv_get(&kv, "victim", buf, sizeof buf, NULL));
+        }
+    }
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -326,5 +357,6 @@ int main(void)
     RUN_TEST(test_wear_leveling_moves_static_data);
     RUN_TEST(test_prog_sizes);
     RUN_TEST(test_garbage_sector_is_recovered);
+    RUN_TEST(test_deleted_key_stays_deleted_across_gc);
     return UNITY_END();
 }

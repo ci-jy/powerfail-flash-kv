@@ -3,7 +3,7 @@
  *
  * Sector layout (P = prog_size):
  *   [A: magic, erase_count, prog_size, crc]  written right after erase
- *   [B: seq, ~seq]                           written when the sector joins
+ *   [B: seq, crc(seq)]                       written when the sector joins
  *                                            the log; zeroed before erase
  *   [record][record]...                      appended, never rewritten
  *
@@ -73,6 +73,8 @@ static uint32_t hash_key(const char *key, size_t len)
     }
     return h;
 }
+
+static uint32_t seq_check(uint32_t seq) { return pfkv_crc32(SECT_MAGIC, &seq, 4); }
 
 static uint32_t align_up(uint32_t v, uint32_t a) { return (v + a - 1u) & ~(a - 1u); }
 
@@ -342,7 +344,7 @@ static int take_sector(pfkv_t *kv)
         kv->state[best] = ST_FREE;
     }
     uint8_t buf[32];
-    uint32_t seq = kv->max_seq + 1u, nseq = ~seq;
+    uint32_t seq = kv->max_seq + 1u, nseq = seq_check(seq);
     memset(buf, 0xFF, sizeof buf);
     memcpy(buf, &seq, 4);
     memcpy(buf + 4, &nseq, 4);
@@ -489,7 +491,7 @@ static int classify(pfkv_t *kv, uint32_t s, int *ec_known)
         kv->erase_count[s] = a.erase_count;
         *ec_known = 1;
     }
-    int b_ok = (b[0] ^ b[1]) == 0xFFFFFFFFu && b[0] != 0u && b[0] != 0xFFFFFFFFu;
+    int b_ok = b[1] == seq_check(b[0]) && b[0] != 0u && b[0] != 0xFFFFFFFFu;
     if (a_ok && b_ok) {
         kv->state[s] = ST_DATA;
         kv->seq[s] = b[0];
@@ -497,16 +499,19 @@ static int classify(pfkv_t *kv, uint32_t s, int *ec_known)
             kv->max_seq = b[0];
         return PFKV_OK;
     }
+    /* Free only if everything after header A reads erased, padding included. */
     kv->state[s] = ST_DIRTY;
-    if (b[0] != 0xFFFFFFFFu || b[1] != 0xFFFFFFFFu)
-        return PFKV_OK;
-    if ((rc = range_erased(kv, base + kv->data_start, kv->flash->sector_size - kv->data_start, &erased)))
+    if ((rc = range_erased(kv, base + kv->hdr_a_size, kv->flash->sector_size - kv->hdr_a_size, &erased)))
         return rc;
     if (!erased)
         return PFKV_OK;
-    if (a_ok)
+    if (a_ok) {
         kv->state[s] = ST_FREE;
-    else if (is_erased(&a, sizeof a))
+        return PFKV_OK;
+    }
+    if ((rc = range_erased(kv, base, kv->hdr_a_size, &erased)))
+        return rc;
+    if (erased)
         kv->state[s] = ST_FREE_BLANK;
     return PFKV_OK;
 }

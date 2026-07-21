@@ -41,6 +41,17 @@ void flash_sim_arm_cut(flash_sim_t *f, uint64_t n, flash_cut_mode_t mode, uint32
     f->rng = seed;
 }
 
+/* After an interrupted operation a unit counts as programmed only if some
+ * bit actually reads 0; a unit that still reads all-ones is erased. */
+static void mark_unit(flash_sim_t *f, uint32_t unit)
+{
+    const uint8_t *m = f->mem + (size_t)unit * f->prog_size;
+    uint8_t acc = 0xFF;
+    for (uint32_t i = 0; i < f->prog_size; i++)
+        acc &= m[i];
+    f->unit_programmed[unit] = acc != 0xFF;
+}
+
 static int power_lost(flash_sim_t *f)
 {
     f->dead = 1;
@@ -87,7 +98,7 @@ static int sim_prog(void *ctx, uint32_t addr, const void *buf, uint32_t len)
             /* Byte k: only a random subset of the bits to clear made it. */
             f->mem[addr + k] &= (uint8_t)(src[k] | (uint8_t)xorshift(&f->rng));
             for (uint32_t u = 0; u <= k; u += p)
-                f->unit_programmed[(addr + u) / p] = 1;
+                mark_unit(f, (addr + u) / p);
         }
         return power_lost(f);
     }
@@ -115,11 +126,21 @@ static int sim_erase(void *ctx, uint32_t sector)
         if (f->cut_mode == CUT_TORN) {
             /* Interrupted erase: a prefix is erased, one byte is partially
              * erased, the rest keeps its old contents. */
-            uint32_t k = xorshift(&f->rng) % f->sector_size;
-            memset(f->mem + base, 0xFF, k);
-            f->mem[base + k] |= (uint8_t)xorshift(&f->rng);
-            for (uint32_t u = 0; u + p <= k; u += p)
-                f->unit_programmed[(base + u) / p] = 0;
+            if (xorshift(&f->rng) & 1u) {
+                uint32_t k = xorshift(&f->rng) % f->sector_size;
+                memset(f->mem + base, 0xFF, k);
+                f->mem[base + k] |= (uint8_t)xorshift(&f->rng);
+            } else {
+                /* Bulk erase stopped early: random bits anywhere in the
+                 * sector have flipped to 1 with a random density. */
+                uint32_t density = xorshift(&f->rng) % 256u;
+                for (uint32_t i = 0; i < f->sector_size; i++)
+                    for (int b = 0; b < 8; b++)
+                        if ((xorshift(&f->rng) & 255u) < density)
+                            f->mem[base + i] |= (uint8_t)(1u << b);
+            }
+            for (uint32_t u = 0; u < f->sector_size; u += p)
+                mark_unit(f, (base + u) / p);
         }
         return power_lost(f);
     }
