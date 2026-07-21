@@ -1,0 +1,10 @@
+{
+  "geometry": {"sector_size": 4096, "sectors": 8, "prog_size": 8, "endurance": 10000},
+  "fixed_writes": 200000,
+  "variants": [
+    {"name": "naive in-place", "erase_counts": [514, 497, 12636, 487, 49314, 12596, 497, 123555], "erase_min": 487, "erase_max": 123555, "erase_spread": 123068, "total_erases": 200096, "write_amplification": 59.90, "writes_to_first_wearout": 16232, "wear_utilisation": 0.204},
+    {"name": "pfkv round-robin GC", "erase_counts": [320, 320, 319, 319, 319, 319, 319, 319], "erase_min": 319, "erase_max": 320, "erase_spread": 1, "total_erases": 2554, "write_amplification": 5.53, "writes_to_first_wearout": 6250154, "wear_utilisation": 1.000},
+    {"name": "pfkv greedy GC", "erase_counts": [0, 0, 334, 333, 345, 329, 331, 328], "erase_min": 0, "erase_max": 345, "erase_spread": 345, "total_erases": 2000, "write_amplification": 4.33, "writes_to_first_wearout": 5968517, "wear_utilisation": 0.748},
+    {"name": "pfkv greedy GC + static WL", "erase_counts": [266, 267, 244, 236, 265, 261, 237, 238], "erase_min": 236, "erase_max": 267, "erase_spread": 31, "total_erases": 2014, "write_amplification": 4.36, "writes_to_first_wearout": 7917922, "wear_utilisation": 0.998}
+  ]
+}
