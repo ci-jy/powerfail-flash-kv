@@ -1,9 +1,9 @@
 {
   "workloads": [
-    {"name": "config-burst", "ops": 700, "flash_ops": 1862, "sector_size": 1024, "sector_count": 4, "prog_size": 8, "cuts": 3724, "nested_cuts": 1111, "lost_acked": 0, "half_visible": 0, "bad_mounts": 0, "violations": 0},
-    {"name": "counters", "ops": 1500, "flash_ops": 3615, "sector_size": 512, "sector_count": 4, "prog_size": 16, "cuts": 7230, "nested_cuts": 775, "lost_acked": 0, "half_visible": 0, "bad_mounts": 0, "violations": 0},
-    {"name": "mixed-sizes", "ops": 500, "flash_ops": 1631, "sector_size": 2048, "sector_count": 6, "prog_size": 4, "cuts": 3262, "nested_cuts": 304, "lost_acked": 0, "half_visible": 0, "bad_mounts": 0, "violations": 0}
+    {"name": "config-burst", "ops": 1400, "flash_ops": 3714, "sector_size": 1024, "sector_count": 4, "prog_size": 8, "cuts": 7428, "nested_cuts": 2056, "lost_acked": 0, "half_visible": 0, "bad_mounts": 0, "violations": 0},
+    {"name": "counters", "ops": 3000, "flash_ops": 7227, "sector_size": 512, "sector_count": 4, "prog_size": 16, "cuts": 14454, "nested_cuts": 1513, "lost_acked": 0, "half_visible": 0, "bad_mounts": 0, "violations": 0},
+    {"name": "mixed-sizes", "ops": 1000, "flash_ops": 3262, "sector_size": 2048, "sector_count": 6, "prog_size": 4, "cuts": 6524, "nested_cuts": 676, "lost_acked": 0, "half_visible": 0, "bad_mounts": 0, "violations": 0}
   ],
-  "total_cuts": 16406,
+  "total_cuts": 32651,
   "total_failures": 0
 }

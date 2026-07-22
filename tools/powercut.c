@@ -352,9 +352,9 @@ int main(int argc, char **argv)
             scale = atof(argv[++i]);
     }
     static workload_t wl[3];
-    gen_config_burst(&wl[0], (int)(700 * scale));
-    gen_counters(&wl[1], (int)(1500 * scale));
-    gen_mixed(&wl[2], (int)(500 * scale));
+    gen_config_burst(&wl[0], (int)(1400 * scale));
+    gen_counters(&wl[1], (int)(3000 * scale));
+    gen_mixed(&wl[2], (int)(1000 * scale));
 
     FILE *jf = json ? fopen(json, "w") : NULL;
     if (jf)
