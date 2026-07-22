@@ -8,9 +8,9 @@ BUILD   := build/host
 
 LIB_SRC := src/pfkv.c sim/flash_sim.c
 
-.PHONY: all test powercut bench plots qemu-test firmware footprint clean
+.PHONY: all cli test powercut bench plots qemu-test firmware footprint clean
 
-all: $(BUILD)/test_pfkv $(BUILD)/powercut $(BUILD)/wear_bench
+all: $(BUILD)/test_pfkv $(BUILD)/powercut $(BUILD)/wear_bench $(BUILD)/pfkv_cli
 
 $(BUILD):
 	mkdir -p $@
@@ -23,6 +23,11 @@ $(BUILD)/powercut: tools/powercut.c $(LIB_SRC) | $(BUILD)
 
 $(BUILD)/wear_bench: bench/wear_bench.c bench/naive_store.c $(LIB_SRC) | $(BUILD)
 	$(CC) $(CFLAGS) -Ibench -o $@ $^
+
+$(BUILD)/pfkv_cli: examples/pfkv_cli.c $(LIB_SRC) | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ $^
+
+cli: $(BUILD)/pfkv_cli
 
 test: $(BUILD)/test_pfkv
 	./$(BUILD)/test_pfkv
