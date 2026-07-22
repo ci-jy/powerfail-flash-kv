@@ -40,7 +40,7 @@ firmware:
 qemu-test: firmware
 	python3 scripts/qemu_check.py firmware/build/pfkv_demo.elf
 
-footprint: firmware
+footprint: qemu-test
 	python3 scripts/footprint.py
 
 clean:
