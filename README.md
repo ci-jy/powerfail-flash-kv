@@ -115,10 +115,10 @@ Other targets: `make bench` (wear benchmark + plot), `make footprint` (writes `d
 | Largest library stack frame (`write_record`, -fstack-usage) | 280 |
 | Task `writer_counter` peak stack use (FreeRTOS high-water mark) | 656 of 1536 |
 | Task `writer_config` peak stack use (FreeRTOS high-water mark) | 656 of 1536 |
-| Task `reader` peak stack use (FreeRTOS high-water mark) | 392 of 1536 |
+| Task `reader` peak stack use (FreeRTOS high-water mark) | 328 of 1536 |
 | Task `supervisor` peak stack use (FreeRTOS high-water mark) | 568 of 1536 |
 
-The demo's `.bss` is mostly the 48 KiB FreeRTOS heap and the 16 KiB RAM-backed flash array. Regenerate the tables with `make footprint`.
+The demo's `.bss` is mostly the 48 KiB FreeRTOS heap and the 16 KiB RAM-backed flash array. High-water marks can differ by a few dozen bytes between runs, because task interleaving (and so the deepest call path) depends on preemption timing. Regenerate the tables with `make footprint`.
 
 ## Design notes and limitations
 
