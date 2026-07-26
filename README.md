@@ -149,3 +149,5 @@ scripts/                plotting, QEMU check, footprint report, toolchain setup
 
 - `third_party/freertos/`: FreeRTOS Kernel V11.1.0, MIT license (`third_party/freertos/LICENSE.md`).
 - `third_party/unity/`: Unity test framework by ThrowTheSwitch.org, MIT license (`third_party/unity/LICENSE.txt`).
+
+Project period: 2026-07-21 to 2026-07-26.
