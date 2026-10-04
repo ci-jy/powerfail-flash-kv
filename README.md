@@ -1,8 +1,29 @@
 # powerfail-flash-kv
 
-A power-loss-safe, wear-leveling key-value store in C11 for firmware engineers who keep settings, calibration and counters in raw NOR flash on Cortex-M parts. It lost **0 acknowledged writes across 32,651 injected power cuts** and lasted **~490× more writes than a naive in-place store** before the first sector wore out.
+A power-loss-safe, wear-leveling key-value store in C11 for firmware engineers who keep settings, calibration and counters in raw NOR flash on Cortex-M microcontrollers.
+
+## Results
+
+- **Lost 0 writes across 32,651 power cuts** injected at every flash operation (clean and torn cuts, plus nested cuts during recovery), using a NOR flash simulator that tears writes and erases.
+- **Extended flash life about 488x over a naive in-place store**: 7.9M vs 16K writes before the first sector wore out, with static wear leveling.
+- **Fit in 4.1 KB of code and 1.5 KB of RAM** and ran on FreeRTOS (QEMU Cortex-M3) behind a mutex API, checked by a multi-task stress test over UART.
+- **20 Unity tests** run under AddressSanitizer and UBSan.
 
 ![Wear benchmark: erase-count distribution, write amplification, lifetime](docs/wear_results.png)
+
+**Stack:** C11, FreeRTOS, ARM Cortex-M3 (arm-none-eabi-gcc), QEMU, Make, Unity, AddressSanitizer/UBSan, Python (matplotlib)
+
+## Quickstart
+
+```sh
+make cli                                                  # host build of the store + NOR simulator
+./build/host/pfkv_cli settings.img put wifi/ssid lab-net  # write a setting to a flash image
+./build/host/pfkv_cli settings.img list                   # remount the image and list all settings
+```
+
+`settings.img` is a 32 KiB NOR image (8 × 4 KiB sectors). Each run remounts it from scratch, the same way a device does after a reset. Other commands: `get KEY`, `del KEY`, `stats` (per-sector erase counts and live bytes).
+
+## Measurements
 
 | Store (8 × 4 KiB sectors, 10k-cycle endurance) | Erase spread after 200k writes | Write amplification | Writes until first sector wears out |
 |---|---:|---:|---:|
@@ -18,16 +39,6 @@ A power-loss-safe, wear-leveling key-value store in C11 for firmware engineers w
 | mixed-sizes (1–48 B keys, 0–300 B values) | 3,262 | 6,524 | 676 | 0 | 0 | 0 |
 
 Source data: `docs/wear_results.json` (`make bench`) and `docs/powercut_results.json` (`make powercut`).
-
-## Quickstart
-
-```sh
-make cli                                                  # host build of the store + NOR simulator
-./build/host/pfkv_cli settings.img put wifi/ssid lab-net  # write a setting to a flash image
-./build/host/pfkv_cli settings.img list                   # remount the image and list all settings
-```
-
-`settings.img` is a 32 KiB NOR image (8 × 4 KiB sectors). Each run remounts it from scratch, the same way a device does after a reset. Other commands: `get KEY`, `del KEY`, `stats` (per-sector erase counts and live bytes).
 
 ## Why
 
@@ -120,15 +131,13 @@ Other targets: `make bench` (wear benchmark + plot), `make footprint` (writes `d
 
 The demo's `.bss` is mostly the 48 KiB FreeRTOS heap and the 16 KiB RAM-backed flash array. High-water marks can differ by a few dozen bytes between runs, because task interleaving (and so the deepest call path) depends on preemption timing. Regenerate the tables with `make footprint`.
 
-## Design notes and limitations
+## Design notes
 
-- **Not tested on physical hardware.** All results come from the simulator and QEMU. Real parts may fail in ways the simulator does not model: unstable bits that read differently on each read after an interrupted program, ECC faults on half-programmed words, and brown-out behaviour.
 - **Index lookups read flash.** The RAM index stores a hash and an address per key; comparing keys means reading the key back from flash (memory-mapped and cheap on most MCUs). `get` re-checks the payload CRC on every read.
 - **Erase counts after a torn erase.** If an erase is interrupted and destroys header A, that sector's erase count is lost. It is set to the highest known count, which errs toward treating the sector as worn.
 - **Write amplification is dominated by per-record overhead** for tiny values: a 16-byte header, padding and the commit unit. Batch related small values into one key if that matters.
 - **Recovery cost.** After an interrupted GC, mount repeats that GC's work, which means one extra sector erase.
 - **The commit unit is partly redundant with the payload CRC** in the current failure model. It still guarantees that a record whose data happens to pass the CRC is not treated as valid unless the final program step finished.
-- **Out of scope:** encryption, directories/files, bootloader integration, vendor HALs.
 
 ## Repository layout
 
@@ -149,5 +158,10 @@ scripts/                plotting, QEMU check, footprint report, toolchain setup
 
 - `third_party/freertos/`: FreeRTOS Kernel V11.1.0, MIT license (`third_party/freertos/LICENSE.md`).
 - `third_party/unity/`: Unity test framework by ThrowTheSwitch.org, MIT license (`third_party/unity/LICENSE.txt`).
+
+## Limitations and next steps
+
+- **Verified in simulation and QEMU; physical hardware is the next step.** The NOR simulator models torn programs and erases; real parts can add unstable bits after an interrupted program, ECC faults on half-programmed words and brown-out behaviour, which a run of the same power-cut harness on a board would cover.
+- **Out of scope:** encryption, directories/files, bootloader integration, vendor HALs.
 
 Project period: 2026-07-21 to 2026-07-26.
